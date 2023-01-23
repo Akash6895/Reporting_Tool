@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="newPrefix">
+    <file>calendar_icon.svg</file>
+    <file>xylem-logo-transparent.png</file>
+  </qresource>
+  <qresource prefix="Back Arrow">
+    <file>previous.svg</file>
+  </qresource>
+</RCC>
