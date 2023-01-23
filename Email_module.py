@@ -2,7 +2,7 @@
 This Module works with 'Sendinblue' Website Account
 User: Akashtaralkar@outlook.com
 Pw: Akash@123
-API Key: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
+API Key:Need to Be generate
 You can find the template projects on the websites
 """
 
@@ -13,7 +13,7 @@ from sib_api_v3_sdk.rest import ApiException
 
 def send_email(message, to, fromm):
     configuration = sib_api_v3_sdk.Configuration()
-    api_key = "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"
+    api_key = ""
     configuration.api_key['api-key'] = api_key
 
     api_instance = sib_api_v3_sdk.TransactionalEmailsApi(sib_api_v3_sdk.ApiClient(configuration))
