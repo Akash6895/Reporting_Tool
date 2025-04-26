@@ -47,7 +47,7 @@ Map_not_found = ''
 user_sts = 0
 connection_sts = 0
 html_data = ''
-
+post_query = '' # define for postgres
 
 # define some global variables - End
 
@@ -284,7 +284,7 @@ class MainWindow(QMainWindow):
     # ==> END ##
 
     def Connection(self):
-        global conn, cursor, sql_query, Final_query, Map_not_found, connection_sts
+        global conn, cursor, sql_query, Final_query, Map_not_found, connection_sts, post_query
         serverName = self.ui.ServerName.text()
         dataBaseName = self.ui.DataBase.text()
 
@@ -310,13 +310,16 @@ class MainWindow(QMainWindow):
                 connection_sts = 0
         else:
             try:
-                conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
+                conn = pyodbc.connect('Driver={PostgreSQL ODBC Driver(UNICODE)};'
                                       f'Server={serverName};'
-                                      'Port=1433;'
+                                      'Port=5432;'
                                       f'Database={dataBaseName};'
-                                      'Trusted_Connection=yes;')
+                                      'Trusted_Connection=yes;'
+                                      'UID=postgres;'
+                                      'pwd=Admin@123;')
                 cursor = conn.cursor()
-                read_map()
+                #read_map()
+                postgres_query()
 
                 text = "Data Base Connected Successfully."
                 UIFunctions.msg_box(self, text)
@@ -346,18 +349,20 @@ class MainWindow(QMainWindow):
             self.ui.error.setText("Please input all fields.")
 
         else:
-            conn = pyodbc.connect('Driver={ODBC Driver 17 for SQL Server};'
+            conn = pyodbc.connect('Driver={PostgreSQL ODBC Driver(UNICODE)};'
                                   'Server=localhost;'
-                                  'Port=1433;'
-                                  'Database=Users;'
-                                  'Trusted_Connection=yes;')
+                                  'Port=5432;'
+                                  'Database=postgres;'
+                                  'Trusted_Connection=yes;'
+                                  'UID=postgres;'
+                                  'pwd=Admin@123;')
             cur = conn.cursor()
-            query1 = '''SELECT (CASE WHEN EXISTS(SELECT 1 FROM dbo.login_info WITH(NOLOCK) 
-            WHERE Username = ?) THEN 1 ELSE 0 END) as result'''
+            query1 = '''SELECT (CASE WHEN EXISTS(SELECT 1 FROM public.login_info 
+            WHERE usr = ?) THEN 1 ELSE 0 END) as result'''
             cur.execute(query1, user)
             result_user = cur.fetchone()[0]
             if result_user == 1:
-                query = 'SELECT Password FROM login_info WHERE Username =\'' + user + "\'"
+                query = 'SELECT pwd FROM public.login_info WHERE usr =\'' + user + "\'"
                 cur.execute(query)
                 result_pass = cur.fetchone()[0]
                 if result_pass == password and int(result_user) == 1:
@@ -437,15 +442,16 @@ class MainWindow(QMainWindow):
 
     # ==> Load all Data - Start
     def Load_Data(self):
-        global csv_data, Data_col, sql_query, Map_not_found, Final_query, connection_sts, html_data
+        global csv_data, Data_col, sql_query, Map_not_found, Final_query, connection_sts, html_data, post_query
         if connection_sts == 1:
             if Map_not_found != 1:
-                sql_query = pd.read_sql_query(Final_query, conn)
+                # sql_query = pd.read_sql_query(Final_query, conn)
+                sql_query = pd.read_sql_query(post_query, conn)
                 Data = pd.DataFrame(sql_query)
                 conn.commit()
-                Data['DateTime'] = pd.to_datetime(Data['DateTime'])
+                Data['SDATE'] = pd.to_datetime(Data['SDATE'])
                 # Change Datetime Format
-                Data['DateTime'] = Data['DateTime'].dt.strftime('%d-%m-%Y %H:%M:%S')
+                Data['SDATE'] = Data['SDATE'].dt.strftime('%d-%m-%Y %H:%M:%S')
                 csv_data = Data
                 # convert data into html Format for sending email
                 html_data = build_table(csv_data, 'blue_light')
@@ -500,20 +506,21 @@ class MainWindow(QMainWindow):
         # Pass The SQL Query and read data from SQL Database
         if connection_sts == 1:
             if Map_not_found != 1:
-                query = pd.read_sql_query(Final_query, conn)
+                # query = pd.read_sql_query(Final_query, conn)
+                query = pd.read_sql_query(post_query, conn)
                 Data = pd.DataFrame(query)
                 conn.commit()
-                Data['DateTime'] = pd.to_datetime(Data['DateTime'])
+                Data['SDATE'] = pd.to_datetime(Data['SDATE'])
 
                 # Filter Data based on datetime and column
-                mask = (Data['DateTime'] > find_date1) & (Data['DateTime'] <= find_date2)
+                mask = (Data['SDATE'] > find_date1) & (Data['SDATE'] <= find_date2)
                 Data = Data.loc[mask]
                 # Change Date Time Format
-                Data['DateTime'] = Data['DateTime'].dt.strftime('%d-%m-%Y %H:%M:%S')
+                Data['SDATE'] = Data['SDATE'].dt.strftime('%d-%m-%Y %H:%M:%S')
                 filt = self.ui.colom_name.currentText()
                 filt_index = self.ui.colom_name.currentIndex()
                 if filt_index != 0:
-                    Data = Data.filter(['DateTime', filt])
+                    Data = Data.filter(['SDATE', filt])
                     Data = Data.dropna()  # Drop NAN Values from Table
                 csv_data = Data
                 # convert data into html Format for sending email
@@ -578,15 +585,16 @@ class MainWindow(QMainWindow):
 
     # ==> Load all Data - Start
     def Load_Chart(self):
-        global csv_data, Data_col, sql_query, Map_not_found, Final_query, connection_sts, conn
+        global csv_data, Data_col, sql_query, Map_not_found, Final_query, connection_sts, conn, post_query
         if connection_sts == 1:
             if Map_not_found != 1:
-                sql_query = pd.read_sql_query(Final_query, conn)
+                # sql_query = pd.read_sql_query(Final_query, conn)
+                sql_query = pd.read_sql_query(post_query, conn)
                 self.df = pd.DataFrame(sql_query)
-                self.df['DateTime'] = pd.to_datetime(self.df['DateTime'])
+                self.df['SDATE'] = pd.to_datetime(self.df['SDATE'])
 
                 # Change Datetime Format
-                self.df['DateTime'] = self.df['DateTime'].dt.strftime('%d-%m-%Y %H:%M:%S')
+                self.df['SDATE'] = self.df['SDATE'].dt.strftime('%d-%m-%Y %H:%M:%S')
                 Data_col = list(self.df.columns)
 
                 # Add item to combo box
@@ -618,8 +626,8 @@ class MainWindow(QMainWindow):
                 self.canv.axes.cla()
                 ax = self.canv.axes
 
-                self.df.sort_values('DateTime', inplace=True)
-                self.df.set_index('DateTime').plot(ax=self.canv.axes)
+                self.df.sort_values('SDATE', inplace=True)
+                self.df.set_index('SDATE').plot(ax=self.canv.axes)
                 ax.grid()
                 # cur = matplotlib.widgets.Cursor(ax, horizon=True, verton=True, useblit=True, color='red', linewidth=1)
 
@@ -659,19 +667,20 @@ class MainWindow(QMainWindow):
         # Pass The SQL Query and read data from SQL Database
         if connection_sts == 1:
             if Map_not_found != 1:
-                query = pd.read_sql_query(Final_query, conn)
+                # query = pd.read_sql_query(Final_query, conn)
+                query = pd.read_sql_query(post_query, conn)
                 self.df = pd.DataFrame(query)
-                self.df['DateTime'] = pd.to_datetime(self.df['DateTime'])
+                self.df['SDATE'] = pd.to_datetime(self.df['SDATE'])
 
                 # Filter Data based on datetime and column
-                mask = (self.df['DateTime'] > from_date_G) & (self.df['DateTime'] <= to_date_G)
+                mask = (self.df['SDATE'] > from_date_G) & (self.df['SDATE'] <= to_date_G)
                 self.df = self.df.loc[mask]
                 # Change Date Time Format
-                self.df['DateTime'] = self.df['DateTime'].dt.strftime('%d-%m-%Y %H:%M:%S')
+                self.df['SDATE'] = self.df['SDATE'].dt.strftime('%d-%m-%Y %H:%M:%S')
                 filt = self.ui.colom_name_G.currentText()
                 filt_index = self.ui.colom_name_G.currentIndex()
                 if filt_index != 0:
-                    self.df = self.df.filter(['DateTime', filt])
+                    self.df = self.df.filter(['SDATE', filt])
                     self.df = self.df.dropna()  # Drop NAN Values from Table
 
                 # Plot data in Chart
@@ -696,8 +705,8 @@ class MainWindow(QMainWindow):
 
                 self.canv.axes.cla()
                 ax = self.canv.axes
-                self.df.sort_values('DateTime', inplace=True)
-                self.df.set_index('DateTime').plot(ax=self.canv.axes)
+                self.df.sort_values('SDATE', inplace=True)
+                self.df.set_index('SDATE').plot(ax=self.canv.axes)
 
                 legend = ax.legend()
                 legend.set_draggable(True)
@@ -789,6 +798,24 @@ def read_map():
     else:
         Map_not_found = 1
 
+
+
+########################################################################
+# READ POSTGRES DATABASE ==> NEW FUNCTION FOR POSTGRES DATABASE
+########################################################################
+def postgres_query():
+    global post_query, Map_not_found
+    Map_not_found = 0
+    post_query = ''' select * from public."134_TR"   
+                    WHERE ("SDATE" BETWEEN '2025-04-7' AND '2025-04-09')
+                    AND 
+                         ( "SDATE" ::text LIKE '%:10:%'
+                        OR "SDATE" ::text LIKE '%:20:%'
+                        OR "SDATE" ::text LIKE '%:30:%' 
+                        OR "SDATE" ::text LIKE '%:40:%'
+                        OR "SDATE" ::text LIKE '%:50:%'
+                        OR "SDATE" ::text LIKE '%:60:%');
+                 '''
 
 ########################################################################
 # ==> Create Calender Ppo-up - Start #
